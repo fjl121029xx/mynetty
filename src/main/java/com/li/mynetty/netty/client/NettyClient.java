@@ -1,55 +1,60 @@
-package com.li.mynetty.netty.server;
+package com.li.mynetty.netty.client;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
-import org.jboss.netty.handler.codec.string.StringEncoder;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class NettyServer {
+public class NettyClient {
 
     public static void main(String[] args) {
 
-        //服务类
-        ServerBootstrap bootstrap = new ServerBootstrap();
+        //客户端
+        ClientBootstrap clientBootstrap = new ClientBootstrap();
 
+        //线程池
         ExecutorService boss = Executors.newCachedThreadPool();
         ExecutorService worker = Executors.newCachedThreadPool();
 
-        //设置niococket工厂
-        bootstrap.setFactory(new NioServerSocketChannelFactory(boss, worker));
+        //socket工厂
+        clientBootstrap.setFactory(new NioClientSocketChannelFactory(boss, worker));
 
-        //设置管道的工厂
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+        //管道工厂
+        clientBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
             public ChannelPipeline getPipeline() throws Exception {
 
                 ChannelPipeline pipeline = Channels.pipeline();
-//                pipeline.addLast("decoder",new StringDecoder());
-//                pipeline.addLast("encoder", new StringEncoder());
-                pipeline.addLast("hellohandler", new HelloHandler());
+                pipeline.addLast("decoder", new StringDecoder());
+                pipeline.addLast("encoder", new StringDecoder());
+                pipeline.addLast("mHandler", new MesHandler());
 
                 return pipeline;
             }
         });
 
-        //服务类绑定端口
-        bootstrap.bind(new InetSocketAddress(10101));
+        ChannelFuture future = clientBootstrap.connect(new InetSocketAddress("127.0.0.1", 10101));
+
+        Channel channel = future.getChannel();
+
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+
+            channel.write( ChannelBuffers.copiedBuffer(scanner.next().getBytes()));
+        }
+
 
     }
-
 }
 
-class HelloHandler extends SimpleChannelHandler {
-
+class MesHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 
@@ -58,15 +63,15 @@ class HelloHandler extends SimpleChannelHandler {
          * pipeline.addLast("decoder",new StringDecoder());
          * 可以注释掉下三行
          */
-        ChannelBuffer message = (ChannelBuffer) e.getMessage();
-        System.out.println(message);
-        System.out.println(new String(message.array()));
+//        ChannelBuffer message = (ChannelBuffer) e.getMessage();
+//        System.out.println(message);
+//        System.out.println(new String(message.array()));
 
-//        System.out.println(e.getMessage());
+        System.out.println(e.getMessage());
 
         //回写
-        ChannelBuffer hi = ChannelBuffers.copiedBuffer("hi".getBytes());
-        ctx.getChannel().write(hi);
+        /*ChannelBuffer hi = ChannelBuffers.copiedBuffer("hi".getBytes());
+        ctx.getChannel().write(hi);*/
 
         super.messageReceived(ctx, e);
     }
